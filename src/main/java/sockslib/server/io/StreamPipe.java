@@ -16,17 +16,20 @@ package sockslib.server.io;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sockslib.quickstart.Socks5Server;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static sockslib.quickstart.Socks5Server.multiplier;
 
 /**
  * The class <code>StreamPipe</code> represents a pipe the can transfer data source a input
@@ -161,12 +164,42 @@ public class StreamPipe implements Runnable, Pipe {
    * @param buffer Buffer that transfer once.
    * @return number of byte that transferred.
    */
+
+
+  private final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+  public String bytesToHex(byte[] bytes) {
+    byte[] hexChars = new byte[bytes.length * 2];
+    for (int j = 0; j < bytes.length; j++) {
+      int v = bytes[j] & 0xFF;
+      hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+      hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+    }
+    return new String(hexChars, StandardCharsets.UTF_8);
+  }
+
+
+
   protected int doTransfer(byte[] buffer) {
 
     int length = -1;
     try {
       length = source.read(buffer);
       if (length > 0) { // transfer the buffer destination output stream.
+        byte[] buff = new byte[length];
+        System.arraycopy(buffer, 0, buff, 0, length);
+
+        if (length > 1 && length < 20) {
+          String payload = bytesToHex(buff);
+          if (multiplier > 1) {
+            if (payload.startsWith("C10C27") || payload.startsWith("C313")) {
+              for (int i = 0; i < multiplier; i++) {
+                destination.write(buffer, 0, length);
+                destination.flush();
+              }
+            }
+          }
+        }
+
         destination.write(buffer, 0, length);
         destination.flush();
         for (PipeListener listener : getPipeListeners()) {

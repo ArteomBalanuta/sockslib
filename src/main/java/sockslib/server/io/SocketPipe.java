@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -213,9 +214,11 @@ public class SocketPipe implements Pipe {
 
     }
 
+
     @Override
     public void onTransfer(Pipe pipe, byte[] buffer, int bufferLength) {
-    }
+
+      }
 
     @Override
     public void onError(Pipe pipe, Exception exception) {

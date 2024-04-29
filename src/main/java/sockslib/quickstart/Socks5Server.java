@@ -25,6 +25,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.Scanner;
+
+import static java.lang.Integer.parseInt;
+import static java.lang.Long.parseLong;
 
 /**
  * The class <code>Socks5Server</code> can create a simple Socks5 server.
@@ -49,7 +54,31 @@ public class Socks5Server {
     Timer.open();
     Socks5Server socks5Server = new Socks5Server();
     socks5Server.start(args);
+
+    readingInput.run();
   }
+
+  public static int multiplier = 1;
+  static Scanner sc= new Scanner(System.in);
+  static Runnable readingInput = () -> {
+    while (true) {
+      try {
+        Thread.sleep(200);
+        Thread.yield();
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      if (sc.hasNextLine()) {
+        try {
+          int n = parseInt(sc.nextLine());
+          multiplier = n;
+          System.out.println("Multiplier: " + n);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    }
+  };
 
   /**
    * Start a SOCKS5 server with some options.
@@ -213,7 +242,7 @@ public class Socks5Server {
           credentials = new UsernamePasswordCredentials(user[0], user[1]);
         }
         host = address[0];
-        port = Integer.parseInt(address[1]);
+        port = parseInt(address[1]);
 
         String proxySslValue = arguments.getValue(Arrays.asList("-S", "--proxySsl"), null);
         if (proxySslValue != null) {
