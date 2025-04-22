@@ -1,11 +1,11 @@
 /*
  * Copyright 2015-2025 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -16,6 +16,7 @@ package sockslib.server.io;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sockslib.multi.PatternChecker;
 import sockslib.quickstart.Socks5Server;
 
 import javax.annotation.Nullable;
@@ -23,10 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static sockslib.quickstart.Socks5Server.multiplier;
@@ -176,9 +175,6 @@ public class StreamPipe implements Runnable, Pipe {
     }
     return new String(hexChars, StandardCharsets.UTF_8);
   }
-
-
-
   protected int doTransfer(byte[] buffer) {
 
     int length = -1;
@@ -188,18 +184,27 @@ public class StreamPipe implements Runnable, Pipe {
         byte[] buff = new byte[length];
         System.arraycopy(buffer, 0, buff, 0, length);
 
+        /*
+        C313C3639BD47065E83AE01925314097E83C05
+C10C27FF028C02D68C020000
+C313DA6CEFCFC883D7BB10E71FAE2CFD749E07
+
+C3137AEA124B27B641BCCFC1729ADA8E63570D
+C108D42F37AD5D10
+C31384B2638AD69D5D1EC4F6BCB9841ABC6C06
+         */
         if (length > 1 && length < 20) {
           String payload = bytesToHex(buff);
+          System.out.println("\"" + payload + "\"" + ",");
           if (multiplier > 1) {
-            if (payload.startsWith("C10C27") || payload.startsWith("C313")) {
+            if (PatternChecker.check(payload)) {
+              System.out.println(LocalDateTime.now() + " Multiplied: " + payload);
               for (int i = 0; i < multiplier; i++) {
                 destination.write(buffer, 0, length);
-                destination.flush();
               }
             }
           }
         }
-
         destination.write(buffer, 0, length);
         destination.flush();
         for (PipeListener listener : getPipeListeners()) {
@@ -215,6 +220,26 @@ public class StreamPipe implements Runnable, Pipe {
     }
 
     return length;
+  }
+
+  boolean isSent = false;
+
+  public static byte[] hexToBytes(String hexString) {
+    // Check if the length of the string is even
+    if (hexString.length() % 2 != 0) {
+      throw new IllegalArgumentException("Hex string must have an even number of characters");
+    }
+
+    int length = hexString.length();
+    byte[] byteArray = new byte[length / 2];
+
+    for (int i = 0; i < length; i += 2) {
+      // Convert each pair of hex characters into a byte
+      String byteString = hexString.substring(i, i + 2);
+      byteArray[i / 2] = (byte) Integer.parseInt(byteString, 16);
+    }
+
+    return byteArray;
   }
 
   @Override
